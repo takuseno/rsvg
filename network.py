@@ -3,7 +3,7 @@ import tensorflow.contrib.layers as layers
 
 
 def _make_actor_network(hiddens, inpt, n_episode, step_size,
-        rnn_state_tuple, num_actions, scope='actor', reuse=None):
+        rnn_state_tuple, obs_dim, num_actions, scope='actor', reuse=None):
     with tf.variable_scope(scope, reuse=reuse):
         out = inpt
         for hidden in hiddens:
@@ -14,16 +14,12 @@ def _make_actor_network(hiddens, inpt, n_episode, step_size,
 
         with tf.variable_scope('rnn'):
             lstm_cell = tf.contrib.rnn.BasicLSTMCell(64, state_is_tuple=True)
-            print(out)
-            rnn_input = tf.reshape(
-                out,
-                [n_episode, step_size, tf.cast(inpt.get_shape()[1], tf.int32)]
-            )
+            rnn_input = tf.reshape(out, [n_episode, step_size, obs_dim])
             lstm_outputs, lstm_state = tf.nn.dynamic_rnn(
                 lstm_cell,
                 rnn_input,
                 initial_state=rnn_state_tuple,
-                sequence_length=step_size,
+                sequence_length=tf.fill([n_episode], step_size),
                 time_major=False
             )
             out = tf.reshape(lstm_outputs, [n_episode * step_size, 64])
@@ -40,7 +36,7 @@ def _make_actor_network(hiddens, inpt, n_episode, step_size,
     return out, lstm_state
 
 def _make_critic_network(inpt, action, n_episode, step_size,
-        rnn_state_tuple, num_actions, scope='critic', reuse=None):
+        rnn_state_tuple, obs_dim, num_actions, scope='critic', reuse=None):
     with tf.variable_scope(scope, reuse=reuse):
         out = tf.layers.dense(inpt, 64,
             bias_initializer=tf.constant_initializer(0.1),
@@ -55,15 +51,12 @@ def _make_critic_network(inpt, action, n_episode, step_size,
 
         with tf.variable_scope('rnn'):
             lstm_cell = tf.contrib.rnn.BasicLSTMCell(64, state_is_tuple=True)
-            rnn_input = tf.reshape(
-                out,
-                [n_episode, step_size, inpt.get_shape()[1]]
-            )
+            rnn_input = tf.reshape(out, [n_episode, step_size, obs_dim])
             lstm_outputs, lstm_state = tf.nn.dynamic_rnn(
                 lstm_cell,
                 rnn_input,
                 initial_state=rnn_state_tuple,
-                sequence_length=step_size,
+                sequence_length=tf.fill([n_episode], step_size),
                 time_major=False
             )
             out = tf.reshape(lstm_outputs, [n_episode * step_size, 64])

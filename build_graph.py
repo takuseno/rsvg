@@ -12,18 +12,34 @@ def build_train(actor, critic, obs_dim,
         obs_tp1_input = tf.placeholder(tf.float32, [None, obs_dim], name='obs_tp1')
         done_mask_ph = tf.placeholder(tf.float32, [None], name='done')
 
-        n_episode_ph = tf.placeholder(tf.int32, [None], name='n_episode')
-        step_size_ph = tf.placeholder(tf.int32, [None], name='step_size')
+        n_episode_ph = tf.placeholder(tf.int32, [], name='n_episode')
+        step_size_ph = tf.placeholder(tf.int32, [], name='step_size')
 
-        actor_rnn_state_ph0 = tf.placeholder(tf.float32, [1, 64], name='actor_rnn_state0')
-        actor_rnn_state_ph1 = tf.placeholder(tf.float32, [1, 64], name='actor_rnn_state1')
+        actor_rnn_state_ph0 = tf.placeholder(
+            tf.float32,
+            [1, 64],
+            name='actor_rnn_state0'
+        )
+        actor_rnn_state_ph1 = tf.placeholder(
+            tf.float32,
+            [1, 64],
+            name='actor_rnn_state1'
+        )
         actor_rnn_state_tuple = tf.contrib.rnn.LSTMStateTuple(
             actor_rnn_state_ph0,
             actor_rnn_state_ph1
         )
 
-        critic_rnn_state_ph0 = tf.placeholder(tf.float32, [1, 64], name='actor_rnn_state0')
-        critic_rnn_state_ph1 = tf.placeholder(tf.float32, [1, 64], name='actor_rnn_state1')
+        critic_rnn_state_ph0 = tf.placeholder(
+            tf.float32,
+            [1, 64],
+            name='critic_rnn_state0'
+        )
+        critic_rnn_state_ph1 = tf.placeholder(
+            tf.float32,
+            [1, 64],
+            name='critic_rnn_state1'
+        )
         critic_rnn_state_tuple = tf.contrib.rnn.LSTMStateTuple(
             critic_rnn_state_ph0,
             critic_rnn_state_ph1
@@ -35,6 +51,7 @@ def build_train(actor, critic, obs_dim,
             n_episode_ph,
             step_size_ph,
             actor_rnn_state_tuple,
+            obs_dim,
             num_actions,
             scope='actor'
         )
@@ -49,6 +66,7 @@ def build_train(actor, critic, obs_dim,
             n_episode_ph,
             step_size_ph,
             actor_rnn_state_tuple,
+            obs_dim,
             num_actions,
             scope='target_actor'
         )
@@ -64,6 +82,7 @@ def build_train(actor, critic, obs_dim,
             n_episode_ph,
             step_size_ph,
             critic_rnn_state_tuple,
+            obs_dim,
             num_actions,
             scope='critic'
         )
@@ -73,6 +92,7 @@ def build_train(actor, critic, obs_dim,
             n_episode_ph,
             step_size_ph,
             critic_rnn_state_tuple,
+            obs_dim,
             num_actions,
             scope='critic',
             reuse=True
@@ -89,6 +109,7 @@ def build_train(actor, critic, obs_dim,
             n_episode_ph,
             step_size_ph,
             critic_rnn_state_tuple,
+            obs_dim,
             num_actions,
             scope='target_critic'
         )
@@ -160,10 +181,10 @@ def build_train(actor, critic, obs_dim,
         act = util.function(
             inputs=[
                 obs_t_input,
-                actor_rnn_state0,
-                actor_rnn_state1,
-                critic_rnn_state0,
-                critic_rnn_state1
+                actor_rnn_state_ph0,
+                actor_rnn_state_ph1,
+                critic_rnn_state_ph0,
+                critic_rnn_state_ph1
             ],
             givens={
                 n_episode_ph: 1,
@@ -181,10 +202,10 @@ def build_train(actor, critic, obs_dim,
             ],
             outputs=[actor_loss],
             givens={
-                actor_rnn_state0: tf.zeros([1, 64], dtype=tf.float32),
-                actor_rnn_state1: tf.zeros([1, 64], dtype=tf.float32),
-                critic_rnn_state0: tf.zeros([1, 64], dtype=tf.float32),
-                critic_rnn_state1: tf.zeros([1, 64], dtype=tf.float32)
+                actor_rnn_state_ph0: tf.zeros([1, 64], dtype=tf.float32),
+                actor_rnn_state_ph1: tf.zeros([1, 64], dtype=tf.float32),
+                critic_rnn_state_ph0: tf.zeros([1, 64], dtype=tf.float32),
+                critic_rnn_state_ph1: tf.zeros([1, 64], dtype=tf.float32)
             },
             updates=[actor_optimize_expr]
         )
@@ -199,10 +220,10 @@ def build_train(actor, critic, obs_dim,
                 step_size_ph
             ],
             givens={
-                actor_rnn_state0: tf.zeros([1, 64], dtype=tf.float32),
-                actor_rnn_state1: tf.zeros([1, 64], dtype=tf.float32),
-                critic_rnn_state0: tf.zeros([1, 64], dtype=tf.float32),
-                critic_rnn_state1: tf.zeros([1, 64], dtype=tf.float32)
+                actor_rnn_state_ph0: tf.zeros([1, 64], dtype=tf.float32),
+                actor_rnn_state_ph1: tf.zeros([1, 64], dtype=tf.float32),
+                critic_rnn_state_ph0: tf.zeros([1, 64], dtype=tf.float32),
+                critic_rnn_state_ph1: tf.zeros([1, 64], dtype=tf.float32)
             },
             outputs=[critic_loss],
             updates=[critic_optimize_expr]
