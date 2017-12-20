@@ -24,15 +24,32 @@ def _make_actor_network(hiddens, inpt, n_episode, step_size,
             )
             out = tf.reshape(lstm_outputs, [n_episode * step_size, 64])
 
-        out = tf.layers.dense(
+        # mean value of normal distribution
+        mu = tf.layers.dense(
             out,
             num_actions,
             kernel_initializer=tf.random_uniform_initializer(
                 minval=-3e-3,
                 maxval=3e-3
-            )
+            ),
+            name='mu'
         )
-        out = tf.nn.tanh(out)
+        mu = tf.nn.tanh(mu)
+
+        # variance of normal distribution
+        sigma = tf.layers.dense(
+            out,
+            num_actions,
+            kernel_initializer=tf.random_uniform_initializer(
+                minval=-3e-3,
+                maxval=3e-3
+            ),
+            name='sigma'
+        )
+        sigma = tf.nn.softplus(sigma)
+
+        # sample actions from normal distribution
+        out = tf.squeeze(tf.distributions.Normal(mu, sigma).sample(num_actions), [0])
     return out, lstm_state
 
 def _make_critic_network(inpt, action, n_episode, step_size,
