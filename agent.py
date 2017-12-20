@@ -11,11 +11,11 @@ class Agent(object):
         self.batch_size = batch_size
         self.num_actions = num_actions
         self.gamma = gamma
+        self.obs_dim = obs_dim
         self.last_obs = None
         self.t = 0
         self.replay_buffer = replay_buffer
         self.actor_lstm_state = np.zeros((2, 1, 64), dtype=np.float32)
-        self.critic_lstm_state = np.zeros((2, 1, 64), dtype=np.float32)
 
         self._act,\
         self._train_actor,\
@@ -33,31 +33,43 @@ class Agent(object):
         return self._act([obs])[0]
 
     def act_and_train(self, obs, reward, episode):
-        action,\
-        self.actor_lstm_state,\
-        self.critic_lstm_state = self._act(
+        action, self.actor_lstm_state  = self._act(
             [obs],
             self.actor_lstm_state[0],
-            self.actor_lstm_state[1],
-            self.critic_lstm_state[0],
-            self.critic_lstm_state[1]
+            self.actor_lstm_state[1]
         )
         action = np.clip(action[0], -2, 2)
+        print(action)
         reward /= 10.0
 
-        if self.t > 5 * 200:
+        if self.t > 100 * 200:
+            # sample experiences
             obs_t,\
             actions,\
             rewards,\
             obs_tp1,\
             dones = self.replay_buffer.sample(self.batch_size)
-            actor_error = self._train_actor(obs_t)
+
+            # reshape data to feed network
+            obs_t = np.reshape(obs_t, (-1, self.obs_dim))
+            actions = np.reshape(actions, (-1, self.num_actions))
+            rewards = np.reshape(rewards, (-1))
+            obs_tp1 = np.reshape(obs_tp1, (-1, self.obs_dim))
+            dones = np.reshape(dones, (-1))
+
+            # update networks
+            actor_error = self._train_actor(obs_t, 5, 200)
             critic_error = self._train_critic(
                 obs_t,
                 actions,
                 rewards,
-                obs_tp1, dones
+                obs_tp1,
+                dones,
+                5,
+                200
             )
+
+            # update target networks
             self._update_actor_target()
             self._update_critic_target()
 
@@ -76,8 +88,13 @@ class Agent(object):
         return action
 
     def stop_episode_and_train(self, obs, reward, done=False):
-        self.replay_buffer.append(obs_t=self.last_obs,
-                action=self.last_action, reward=reward, obs_tp1=obs, done=done)
+        self.replay_buffer.append(
+            obs_t=self.last_obs,
+            action=self.last_action,
+            reward=reward,
+            obs_tp1=obs,
+            done=done
+        )
         self.replay_buffer.end_episode()
         self.stop_episode()
 
@@ -85,4 +102,3 @@ class Agent(object):
         self.last_obs = None
         self.last_action = []
         self.actor_lstm_state = np.zeros((2, 1, 64), dtype=np.float32)
-        self.critic_lstm_state = np.zeros((2, 1, 64), dtype=np.float32)

@@ -14,7 +14,7 @@ def _make_actor_network(hiddens, inpt, n_episode, step_size,
 
         with tf.variable_scope('rnn'):
             lstm_cell = tf.contrib.rnn.BasicLSTMCell(64, state_is_tuple=True)
-            rnn_input = tf.reshape(out, [n_episode, step_size, obs_dim])
+            rnn_input = tf.reshape(out, [n_episode, step_size, 64])
             lstm_outputs, lstm_state = tf.nn.dynamic_rnn(
                 lstm_cell,
                 rnn_input,
@@ -51,7 +51,7 @@ def _make_critic_network(inpt, action, n_episode, step_size,
 
         with tf.variable_scope('rnn'):
             lstm_cell = tf.contrib.rnn.BasicLSTMCell(64, state_is_tuple=True)
-            rnn_input = tf.reshape(out, [n_episode, step_size, obs_dim])
+            rnn_input = tf.reshape(out, [n_episode, step_size, 64])
             lstm_outputs, lstm_state = tf.nn.dynamic_rnn(
                 lstm_cell,
                 rnn_input,

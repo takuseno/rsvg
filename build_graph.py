@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 import lightsaber.tensorflow.util as util
 
 
@@ -17,12 +18,12 @@ def build_train(actor, critic, obs_dim,
 
         actor_rnn_state_ph0 = tf.placeholder(
             tf.float32,
-            [1, 64],
+            [None, 64],
             name='actor_rnn_state0'
         )
         actor_rnn_state_ph1 = tf.placeholder(
             tf.float32,
-            [1, 64],
+            [None, 64],
             name='actor_rnn_state1'
         )
         actor_rnn_state_tuple = tf.contrib.rnn.LSTMStateTuple(
@@ -32,12 +33,12 @@ def build_train(actor, critic, obs_dim,
 
         critic_rnn_state_ph0 = tf.placeholder(
             tf.float32,
-            [1, 64],
+            [None, 64],
             name='critic_rnn_state0'
         )
         critic_rnn_state_ph1 = tf.placeholder(
             tf.float32,
-            [1, 64],
+            [None, 64],
             name='critic_rnn_state1'
         )
         critic_rnn_state_tuple = tf.contrib.rnn.LSTMStateTuple(
@@ -182,15 +183,13 @@ def build_train(actor, critic, obs_dim,
             inputs=[
                 obs_t_input,
                 actor_rnn_state_ph0,
-                actor_rnn_state_ph1,
-                critic_rnn_state_ph0,
-                critic_rnn_state_ph1
+                actor_rnn_state_ph1
             ],
             givens={
                 n_episode_ph: 1,
                 step_size_ph: 1
             },
-            outputs=[policy_t, actor_lstm_state, critic_lstm_state]
+            outputs=[policy_t, actor_lstm_state]
         )
 
         # train theano-style function
@@ -202,10 +201,10 @@ def build_train(actor, critic, obs_dim,
             ],
             outputs=[actor_loss],
             givens={
-                actor_rnn_state_ph0: tf.zeros([1, 64], dtype=tf.float32),
-                actor_rnn_state_ph1: tf.zeros([1, 64], dtype=tf.float32),
-                critic_rnn_state_ph0: tf.zeros([1, 64], dtype=tf.float32),
-                critic_rnn_state_ph1: tf.zeros([1, 64], dtype=tf.float32)
+                actor_rnn_state_ph0: np.zeros([5, 64], dtype=np.float32),
+                actor_rnn_state_ph1: np.zeros([5, 64], dtype=np.float32),
+                critic_rnn_state_ph0: np.zeros([5, 64], dtype=np.float32),
+                critic_rnn_state_ph1: np.zeros([5, 64], dtype=np.float32)
             },
             updates=[actor_optimize_expr]
         )
@@ -220,10 +219,10 @@ def build_train(actor, critic, obs_dim,
                 step_size_ph
             ],
             givens={
-                actor_rnn_state_ph0: tf.zeros([1, 64], dtype=tf.float32),
-                actor_rnn_state_ph1: tf.zeros([1, 64], dtype=tf.float32),
-                critic_rnn_state_ph0: tf.zeros([1, 64], dtype=tf.float32),
-                critic_rnn_state_ph1: tf.zeros([1, 64], dtype=tf.float32)
+                actor_rnn_state_ph0: np.zeros([5, 64], dtype=np.float32),
+                actor_rnn_state_ph1: np.zeros([5, 64], dtype=np.float32),
+                critic_rnn_state_ph0: np.zeros([5, 64], dtype=np.float32),
+                critic_rnn_state_ph1: np.zeros([5, 64], dtype=np.float32)
             },
             outputs=[critic_loss],
             updates=[critic_optimize_expr]
