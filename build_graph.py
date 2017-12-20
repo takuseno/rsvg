@@ -201,10 +201,10 @@ def build_train(actor, critic, obs_dim,
             ],
             outputs=[actor_loss],
             givens={
-                actor_rnn_state_ph0: np.zeros([3, 64], dtype=np.float32),
-                actor_rnn_state_ph1: np.zeros([3, 64], dtype=np.float32),
-                critic_rnn_state_ph0: np.zeros([3, 64], dtype=np.float32),
-                critic_rnn_state_ph1: np.zeros([3, 64], dtype=np.float32)
+                actor_rnn_state_ph0: np.zeros([4, 64], dtype=np.float32),
+                actor_rnn_state_ph1: np.zeros([4, 64], dtype=np.float32),
+                critic_rnn_state_ph0: np.zeros([4, 64], dtype=np.float32),
+                critic_rnn_state_ph1: np.zeros([4, 64], dtype=np.float32)
             },
             updates=[actor_optimize_expr]
         )
@@ -219,10 +219,10 @@ def build_train(actor, critic, obs_dim,
                 step_size_ph
             ],
             givens={
-                actor_rnn_state_ph0: np.zeros([3, 64], dtype=np.float32),
-                actor_rnn_state_ph1: np.zeros([3, 64], dtype=np.float32),
-                critic_rnn_state_ph0: np.zeros([3, 64], dtype=np.float32),
-                critic_rnn_state_ph1: np.zeros([3, 64], dtype=np.float32)
+                actor_rnn_state_ph0: np.zeros([4, 64], dtype=np.float32),
+                actor_rnn_state_ph1: np.zeros([4, 64], dtype=np.float32),
+                critic_rnn_state_ph0: np.zeros([4, 64], dtype=np.float32),
+                critic_rnn_state_ph1: np.zeros([4, 64], dtype=np.float32)
             },
             outputs=[critic_loss],
             updates=[critic_optimize_expr]
