@@ -7,7 +7,7 @@ import tensorflow as tf
 
 class Agent(object):
     def __init__(self, actor, critic, obs_dim,
-                num_actions, replay_buffer, batch_size=5, gamma=0.9):
+                num_actions, replay_buffer, batch_size=3, gamma=0.9):
         self.batch_size = batch_size
         self.num_actions = num_actions
         self.gamma = gamma
@@ -58,14 +58,14 @@ class Agent(object):
             dones = np.reshape(dones, (-1))
 
             # update networks
-            actor_error = self._train_actor(obs_t, 5, 200)
+            actor_error = self._train_actor(obs_t, self.batch_size, 200)
             critic_error = self._train_critic(
                 obs_t,
                 actions,
                 rewards,
                 obs_tp1,
                 dones,
-                5,
+                self.batch_size,
                 200
             )
 
