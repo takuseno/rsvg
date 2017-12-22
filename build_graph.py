@@ -3,8 +3,8 @@ import numpy as np
 import lightsaber.tensorflow.util as util
 
 
-def build_train(actor, critic, obs_dim,
-        num_actions, gamma=1.0, scope='ddpg', tau=0.001, reuse=None):
+def build_train(actor, critic, obs_dim, num_actions,
+        batch_size, gamma=1.0, scope='ddpg', tau=0.001, reuse=None):
     with tf.variable_scope(scope, reuse=reuse):
         # input placeholders
         obs_t_input = tf.placeholder(tf.float32, [None, obs_dim], name='obs_t')
@@ -193,6 +193,7 @@ def build_train(actor, critic, obs_dim,
         )
 
         # train theano-style function
+        rnn_state_shape = [batch_size, 64]
         train_actor = util.function(
             inputs=[
                 obs_t_input,
@@ -201,10 +202,22 @@ def build_train(actor, critic, obs_dim,
             ],
             outputs=[actor_loss],
             givens={
-                actor_rnn_state_ph0: np.zeros([4, 64], dtype=np.float32),
-                actor_rnn_state_ph1: np.zeros([4, 64], dtype=np.float32),
-                critic_rnn_state_ph0: np.zeros([4, 64], dtype=np.float32),
-                critic_rnn_state_ph1: np.zeros([4, 64], dtype=np.float32)
+                actor_rnn_state_ph0: np.zeros(
+                    rnn_state_shape,
+                    dtype=np.float32
+                ),
+                actor_rnn_state_ph1: np.zeros(
+                    rnn_state_shape,
+                    dtype=np.float32
+                ),
+                critic_rnn_state_ph0: np.zeros(
+                    rnn_state_shape,
+                    dtype=np.float32
+                ),
+                critic_rnn_state_ph1: np.zeros(
+                    rnn_state_shape,
+                    dtype=np.float32
+                )
             },
             updates=[actor_optimize_expr]
         )
@@ -219,10 +232,22 @@ def build_train(actor, critic, obs_dim,
                 step_size_ph
             ],
             givens={
-                actor_rnn_state_ph0: np.zeros([4, 64], dtype=np.float32),
-                actor_rnn_state_ph1: np.zeros([4, 64], dtype=np.float32),
-                critic_rnn_state_ph0: np.zeros([4, 64], dtype=np.float32),
-                critic_rnn_state_ph1: np.zeros([4, 64], dtype=np.float32)
+                actor_rnn_state_ph0: np.zeros(
+                    rnn_state_shape,
+                    dtype=np.float32
+                ),
+                actor_rnn_state_ph1: np.zeros(
+                    rnn_state_shape,
+                    dtype=np.float32
+                ),
+                critic_rnn_state_ph0: np.zeros(
+                    rnn_state_shape,
+                    dtype=np.float32
+                ),
+                critic_rnn_state_ph1: np.zeros(
+                    rnn_state_shape,
+                    dtype=np.float32
+                )
             },
             outputs=[critic_loss],
             updates=[critic_optimize_expr]

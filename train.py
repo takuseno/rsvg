@@ -19,9 +19,8 @@ def main():
     parser.add_argument('--outdir', type=str, default=None)
     parser.add_argument('--log', type=str, default=datetime.now().strftime("%Y%m%d%H%M%S"))
     parser.add_argument('--load', type=str, default=None)
-    parser.add_argument('--final-exploration-frames',
-                        type=int, default=10 ** 6)
     parser.add_argument('--final-steps', type=int, default=10 ** 7)
+    parser.add_argument('--episode-update', action='store_true')
     parser.add_argument('--render', action='store_true')
     args = parser.parse_args()
 
@@ -44,7 +43,14 @@ def main():
     sess = tf.Session()
     sess.__enter__()
 
-    agent = Agent(actor, critic, obs_dim, n_actions, replay_buffer)
+    agent = Agent(
+        actor,
+        critic,
+        obs_dim,
+        n_actions,
+        replay_buffer,
+        episode_update=args.episode_update
+    )
 
     initialize()
 

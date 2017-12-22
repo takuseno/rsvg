@@ -6,9 +6,11 @@ import tensorflow as tf
 
 
 class Agent(object):
-    def __init__(self, actor, critic, obs_dim,
-                num_actions, replay_buffer, batch_size=4, gamma=0.9):
+    def __init__(self, actor, critic, obs_dim, num_actions, replay_buffer,
+            batch_size=4, sequence_length=8, episode_update=True, gamma=0.9):
         self.batch_size = batch_size
+        self.sequence_length = sequence_length
+        self.episode_update = episode_update
         self.num_actions = num_actions
         self.gamma = gamma
         self.obs_dim = obs_dim
@@ -26,6 +28,7 @@ class Agent(object):
             critic=critic,
             obs_dim=obs_dim,
             num_actions=num_actions,
+            batch_size=batch_size,
             gamma=gamma
         )
 
@@ -44,11 +47,24 @@ class Agent(object):
 
         if self.t > 10 * 200:
             # sample experiences
-            obs_t,\
-            actions,\
-            rewards,\
-            obs_tp1,\
-            dones = self.replay_buffer.sample_sequences(self.batch_size, 8)
+            if self.episode_update:
+                # sample whole trajectories from episodes
+                obs_t,\
+                actions,\
+                rewards,\
+                obs_tp1,\
+                dones = self.replay_buffer.sample_episodes(self.batch_size)
+                self.sequence_length = len(obs_t[0])
+            else:
+                # sample parts of trajectories from episodes
+                obs_t,\
+                actions,\
+                rewards,\
+                obs_tp1,\
+                dones = self.replay_buffer.sample_sequences(
+                    self.batch_size,
+                    self.sequence_length
+                )
 
             # reshape data to feed network
             obs_t = np.reshape(obs_t, (-1, self.obs_dim))
@@ -58,7 +74,11 @@ class Agent(object):
             dones = np.reshape(dones, (-1))
 
             # update networks
-            actor_error = self._train_actor(obs_t, self.batch_size, 8)
+            actor_error = self._train_actor(
+                obs_t,
+                self.batch_size,
+                self.sequence_length
+            )
             critic_error = self._train_critic(
                 obs_t,
                 actions,
@@ -66,7 +86,7 @@ class Agent(object):
                 obs_tp1,
                 dones,
                 self.batch_size,
-                8
+                self.sequence_length
             )
 
             # update target networks
