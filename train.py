@@ -6,109 +6,81 @@ import os
 import numpy as np
 import tensorflow as tf
 
-from lightsaber.tensorflow.util import initialize
 from lightsaber.rl.replay_buffer import EpisodeReplayBuffer
+from lightsaber.rl.trainer import Trainer
+from lightsaber.rl.env_wrapper import EnvWrapper
+from lightsaber.tensorflow.log import TfBoardLogger
 from network import make_actor_network, make_critic_network
 from agent import Agent
 from datetime import datetime
 
 
 def main():
+    date = datetime.now().strftime("%Y%m%d%H%M%S")
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default='Pendulum-v0')
-    parser.add_argument('--outdir', type=str, default=None)
-    parser.add_argument('--log', type=str, default=datetime.now().strftime("%Y%m%d%H%M%S"))
+    parser.add_argument('--log', type=str, default=date)
     parser.add_argument('--load', type=str, default=None)
     parser.add_argument('--final-steps', type=int, default=10 ** 7)
     parser.add_argument('--episode-update', action='store_true')
     parser.add_argument('--render', action='store_true')
+    parser.add_argument('--demo', action='store_true')
     args = parser.parse_args()
 
-    if args.outdir is None:
-        args.outdir = os.path.join(os.path.dirname(__file__), 'results')
-        if not os.path.exists(args.outdir):
-            os.makedirs(args.outdir)
+    outdir = os.path.join(os.path.dirname(__file__), 'results/{}'.format(args.log))
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
 
     logdir = os.path.join(os.path.dirname(__file__), 'logs/{}'.format(args.log))
 
-    env = gym.make(args.env)
+    env = EnvWrapper(
+        env=gym.make(args.env),
+        r_preprocess=lambda r: r / 10.0
+    )
 
     obs_dim = env.observation_space.shape[0]
     n_actions = env.action_space.shape[0]
 
-    actor = make_actor_network([64, 64])
-    critic = make_critic_network()
-    replay_buffer = EpisodeReplayBuffer(10 ** 3)
-
     sess = tf.Session()
     sess.__enter__()
 
-    agent = Agent(
-        actor,
-        critic,
-        obs_dim,
-        n_actions,
-        replay_buffer,
-        episode_update=args.episode_update
-    )
+    actor = make_actor_network([64, 64])
+    critic = make_critic_network([64, 64])
+    replay_buffer = EpisodeReplayBuffer(10 ** 3)
 
-    initialize()
+    agent = Agent(
+        actor, critic, obs_dim, n_actions, replay_buffer,
+        episode_update=args.episode_update)
+
+    sess.run(tf.global_variables_initializer())
 
     saver = tf.train.Saver()
     if args.load is not None:
         saver.restore(sess, args.load)
 
-    reward_summary = tf.placeholder(tf.int32, (), name='reward_summary')
-    tf.summary.scalar('reward_summary', reward_summary)
-    merged = tf.summary.merge_all()
     train_writer = tf.summary.FileWriter(logdir, sess.graph)
+    tflogger = TfBoardLogger(train_writer)
+    tflogger.register('reward', dtype=tf.float32)
 
-    global_step = 0
-    episode = 0
+    end_episode = lambda r, s, e: tflogger.plot('reward', r, s)
+    def after_action(state, reward, global_step, local_step):
+        if global_step > 0 and global_step % 10 * 5 == 0:
+            path = os.path.join(outdir, 'model.ckpt')
+            saver.save(sess, path, global_step=global_step)
 
-    while True:
-        reward = 0
-        done = False
-        sum_of_rewards = 0
-        step = 0
-        state = env.reset()
+    trainer = Trainer(
+        env=env,
+        agent=agent,
+        render=args.render,
+        state_shape=[obs_dim],
+        state_window=1,
+        final_step=args.final_steps,
+        end_episode=end_episode,
+        after_action=after_action,
+        training=not args.demo
+    )
 
-        while True:
-            if args.render:
-                env.render()
-
-            if done:
-                summary, _ = sess.run(
-                    [merged, reward_summary],
-                    feed_dict={reward_summary: sum_of_rewards}
-                )
-                train_writer.add_summary(summary, global_step)
-                agent.stop_episode_and_train(state, reward, done=done)
-                break
-
-            action = agent.act_and_train(state, reward, episode)
-
-            state, reward, done, info = env.step(action)
-
-            sum_of_rewards += reward
-            step += 1
-            global_step += 1
-
-            if global_step % 10 ** 6 == 0:
-                file_name = '{}/model.ckpt'.format(global_step)
-                path = os.path.join(args.outdir, file_name)
-                saver.save(sess, path)
-
-        episode += 1
-
-        print('Episode: {}, Step: {}: Reward: {}'.format(
-            episode,
-            global_step,
-            sum_of_rewards
-        ))
-
-        if args.final_steps < global_step:
-            break
+    trainer.start()
 
 if __name__ == '__main__':
     main()
