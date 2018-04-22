@@ -15,12 +15,12 @@ https://arxiv.org/pdf/1512.04455.pdf
 ## usage
 ### training
 ```
-$ python train.py --gpu {0 or -1} --render --final-steps 10000000
+$ python train.py [--render] --final-steps 10000000
 ```
 
 ### playing
 ```
-$ python play.py --gpu {0 or -1} --render --load {path of models}
+$ python train.py [--render] --load {path of models} --demo
 ```
 
 ### implementation
